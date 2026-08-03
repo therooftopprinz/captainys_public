@@ -1233,8 +1233,14 @@ void GeblGuiEditorBase::Edit_RotateSelection_CursorMoved(FsGui3DInterface *)
 	{
 		UILineVtxBuf.CleanUp();
 
+		YsMatrix4x4 rot;
+		threeDInterface.GetRotationMatrix(rot);
+		YsVec3 cen=threeDInterface.GetRotationCenter();
+
 		YsMatrix4x4 tfm;
-		threeDInterface.GetRotationMatrix(tfm);
+		tfm.Translate(cen);
+		tfm*=rot;
+		tfm.Translate(-cen);
 
 		YsArray <YsShellVertexHandle> allSelVtHd;
 		YsShellExtEdit_GetAllVertexInSelection(allSelVtHd,*slHd);
@@ -1276,8 +1282,14 @@ void GeblGuiEditorBase::Edit_RotateSelection_CursorMoved(FsGui3DInterface *)
 {
 	if(NULL!=canvas.slHd)
 	{
+		YsMatrix4x4 rot;
+		canvas.threeDInterface.GetRotationMatrix(rot);
+		YsVec3 cen=canvas.threeDInterface.GetRotationCenter();
+
 		YsMatrix4x4 tfm;
-		canvas.threeDInterface.GetRotationMatrix(tfm);
+		tfm.Translate(cen);
+		tfm*=rot;
+		tfm.Translate(-cen);
 
 		YsArray <YsShellVertexHandle> allSelVtHd;
 		YsShellExtEdit_GetAllVertexInSelection(allSelVtHd,*(canvas.slHd));
