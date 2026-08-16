@@ -79,6 +79,10 @@ const char *YSGLSL_variColor3DDrawingFragmentShader[]=
 	"{\n",
 	"	gl_FragColor=color;\n",
 	"\n",
+	"	// Untextured geometry used to sample the texture anyway and then multiply the result\n",
+	"	// out with useTexture.  A tiler like the Mali-G31 pays full rate for that fetch, and\n",
+	"	// most of YSFlight's scenery is untextured, so the sample is skipped instead.\n",
+	"	if(0.0<useTexture)\n",
 	"	{\n",
 	"		LOWP  vec4 texcell[3],avg;\n",
 	"		texcell[0]=texture2D(textureIdent,texCoordOut.xy);\n",
@@ -111,6 +115,8 @@ const char *YSGLSL_variColor3DDrawingFragmentShader[]=
 	"	// -d*d= -4.60517\n",
 	"	// d=2.146\n",
 	"	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"	if(0.0<fogDensity)\n",
 	"	{\n",
 	"		MIDP  float d=fogDensity*abs(fogZ);\n",
 	"		MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -120,7 +126,7 @@ const char *YSGLSL_variColor3DDrawingFragmentShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColor3DDrawingFragmentShader_nLine=117;
+const int YSGLSL_variColor3DDrawingFragmentShader_nLine=123;
 const char *YSGLSL_variColor3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -341,9 +347,11 @@ const char *YSGLSL_variColorPerVtxShading3DDrawingFragmentShader[]=
 	"uniform sampler2D  textureIdent;\n",
 	"varying HIGHP vec3 texCoordOut;\n",
 	"\n",
-	"// Variables for alpha cutoff\n",
-	"uniform  LOWP  float alphaCutOff;\n",
+	"#ifndef YSGLSL_OPAQUE\n",
+	"	// Variables for alpha cutoff\n",
+	"	uniform  LOWP  float alphaCutOff;\n",
 	"\n",
+	"#endif\n",
 	"// Variables for fog\n",
 	"uniform  MIDP  float fogEnabled;\n",
 	"uniform  MIDP  float fogDensity;\n",
@@ -355,6 +363,10 @@ const char *YSGLSL_variColorPerVtxShading3DDrawingFragmentShader[]=
 	"{\n",
 	"	gl_FragColor=colorOut;\n",
 	"\n",
+	"	// Untextured geometry used to sample the texture anyway and then multiply the result\n",
+	"	// out with useTexture.  A tiler like the Mali-G31 pays full rate for that fetch, and\n",
+	"	// most of YSFlight's scenery is untextured, so the sample is skipped instead.\n",
+	"	if(0.0<useTexture)\n",
 	"	{\n",
 	"		LOWP  vec4 texcell[3],avg;\n",
 	"		texcell[0]=texture2D(textureIdent,texCoordOut.xy);\n",
@@ -374,11 +386,13 @@ const char *YSGLSL_variColorPerVtxShading3DDrawingFragmentShader[]=
 	"		gl_FragColor=gl_FragColor*avg;\n",
 	"	}\n",
 	"\n",
+	"#ifndef YSGLSL_OPAQUE\n",
 	"	if(gl_FragColor.a<alphaCutOff)\n",
 	"	{\n",
 	"		discard;\n",
 	"	}\n",
 	"\n",
+	"#endif\n",
 	"	// f  0:Completely fogged out   1:Clear\n",
 	"	// f=e^(-d*d)\n",
 	"	// d  0:Clear      Infinity: Completely fogged out\n",
@@ -387,6 +401,8 @@ const char *YSGLSL_variColorPerVtxShading3DDrawingFragmentShader[]=
 	"	// -d*d= -4.60517\n",
 	"	// d=2.146\n",
 	"	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"	if(0.0<fogDensity)\n",
 	"	{\n",
 	"		MIDP  float d=fogDensity*abs(fogZ);\n",
 	"		MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -396,7 +412,7 @@ const char *YSGLSL_variColorPerVtxShading3DDrawingFragmentShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColorPerVtxShading3DDrawingFragmentShader_nLine=117;
+const int YSGLSL_variColorPerVtxShading3DDrawingFragmentShader_nLine=127;
 const char *YSGLSL_variColorPerVtxShading3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -502,6 +518,14 @@ const char *YSGLSL_variColorPerVtxShading3DDrawingVertexShader[]=
 	"\n",
 	"	for(int lightNo=0; lightNo<YSGLSL_MAX_NUM_LIGHT; lightNo++)\n",
 	"	{\n",
+	"		// Disabled lights used to be multiplied out by lightEnabled at the end, which still\n",
+	"		// paid for two normalize and a pow per light.  On a Mali-G31 that is seven wasted\n",
+	"		// light evaluations per fragment; the branch is uniform so it costs nothing.\n",
+	"		if(lightEnabled[lightNo]<=0.0)\n",
+	"		{\n",
+	"			continue;\n",
+	"		}\n",
+	"\n",
 	"		MIDP float diffuseIntensity=lightCoeff*max(dot(nomLocal,lightPos[lightNo].xyz),0.0);\n",
 	"		HIGHP vec3 unitVecToCamera=normalize(vecToCamera);\n",
 	"		HIGHP vec3 mid=normalize(lightPos[lightNo].xyz+unitVecToCamera);\n",
@@ -587,7 +611,7 @@ const char *YSGLSL_variColorPerVtxShading3DDrawingVertexShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColorPerVtxShading3DDrawingVertexShader_nLine=187;
+const int YSGLSL_variColorPerVtxShading3DDrawingVertexShader_nLine=195;
 const char *YSGLSL_variColorPerPixShading3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -944,6 +968,14 @@ const char *YSGLSL_variColorPerPixShading3DDrawingFragmentShader[]=
 	"\n",
 	"	for(int lightNo=0; lightNo<YSGLSL_MAX_NUM_LIGHT; lightNo++)\n",
 	"	{\n",
+	"		// Disabled lights used to be multiplied out by lightEnabled at the end, which still\n",
+	"		// paid for two normalize and a pow per light.  On a Mali-G31 that is seven wasted\n",
+	"		// light evaluations per fragment; the branch is uniform so it costs nothing.\n",
+	"		if(lightEnabled[lightNo]<=0.0)\n",
+	"		{\n",
+	"			continue;\n",
+	"		}\n",
+	"\n",
 	"		MIDP float diffuseIntensity=lightCoeff*max(dot(nomLocal,lightPos[lightNo].xyz),0.0);\n",
 	"		HIGHP vec3 unitVecToCamera=normalize(vecToCamera);\n",
 	"		HIGHP vec3 mid=normalize(lightPos[lightNo].xyz+unitVecToCamera);\n",
@@ -1021,6 +1053,10 @@ const char *YSGLSL_variColorPerPixShading3DDrawingFragmentShader[]=
 	"\n",
 	"	gl_FragColor=accumColor;\n",
 	"\n",
+	"	// Untextured geometry used to sample the texture anyway and then multiply the result\n",
+	"	// out with useTexture.  A tiler like the Mali-G31 pays full rate for that fetch, and\n",
+	"	// most of YSFlight's scenery is untextured, so the sample is skipped instead.\n",
+	"	if(0.0<useTexture)\n",
 	"	{\n",
 	"		LOWP  vec4 texcell[3],avg;\n",
 	"		texcell[0]=texture2D(textureIdent,texCoordOut.xy);\n",
@@ -1053,6 +1089,8 @@ const char *YSGLSL_variColorPerPixShading3DDrawingFragmentShader[]=
 	"	// -d*d= -4.60517\n",
 	"	// d=2.146\n",
 	"	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"	if(0.0<fogDensity)\n",
 	"	{\n",
 	"		MIDP  float d=fogDensity*abs(fogZ);\n",
 	"		MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -1062,7 +1100,7 @@ const char *YSGLSL_variColorPerPixShading3DDrawingFragmentShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColorPerPixShading3DDrawingFragmentShader_nLine=288;
+const int YSGLSL_variColorPerPixShading3DDrawingFragmentShader_nLine=302;
 const char *YSGLSL_variColorBillBoard3DDrawingFragmentShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -1155,6 +1193,8 @@ const char *YSGLSL_variColorBillBoard3DDrawingFragmentShader[]=
 	"	// -d*d= -4.60517\n",
 	"	// d=2.146\n",
 	"	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"	if(0.0<fogDensity)\n",
 	"	{\n",
 	"		MIDP  float d=fogDensity*abs(fogZ);\n",
 	"		MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -1164,7 +1204,7 @@ const char *YSGLSL_variColorBillBoard3DDrawingFragmentShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColorBillBoard3DDrawingFragmentShader_nLine=98;
+const int YSGLSL_variColorBillBoard3DDrawingFragmentShader_nLine=100;
 const char *YSGLSL_variColorBillBoard3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -1370,6 +1410,8 @@ const char *YSGLSL_flash3DDrawingFragmentShader[]=
 	"		// -d*d= -4.60517\n",
 	"		// d=2.146\n",
 	"		// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"		// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"		if(0.0<fogDensity)\n",
 	"		{\n",
 	"			MIDP  float d=fogDensity*abs(fogZ);\n",
 	"			MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -1406,6 +1448,8 @@ const char *YSGLSL_flash3DDrawingFragmentShader[]=
 	"			// -d*d= -4.60517\n",
 	"			// d=2.146\n",
 	"			// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"			// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"			if(0.0<fogDensity)\n",
 	"			{\n",
 	"				MIDP  float d=fogDensity*abs(fogZ);\n",
 	"				MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -1417,7 +1461,7 @@ const char *YSGLSL_flash3DDrawingFragmentShader[]=
 	"    }\n",
 	"}\n",
 };
-const int YSGLSL_flash3DDrawingFragmentShader_nLine=135;
+const int YSGLSL_flash3DDrawingFragmentShader_nLine=139;
 const char *YSGLSL_flash3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -1614,6 +1658,8 @@ const char *YSGLSL_flashByPointSprite3DDrawingFragmentShader[]=
 	"		// -d*d= -4.60517\n",
 	"		// d=2.146\n",
 	"		// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"		// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"		if(0.0<fogDensity)\n",
 	"		{\n",
 	"			MIDP  float d=fogDensity*abs(fogZ);\n",
 	"			MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -1650,6 +1696,8 @@ const char *YSGLSL_flashByPointSprite3DDrawingFragmentShader[]=
 	"			// -d*d= -4.60517\n",
 	"			// d=2.146\n",
 	"			// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"			// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"			if(0.0<fogDensity)\n",
 	"			{\n",
 	"				MIDP  float d=fogDensity*abs(fogZ);\n",
 	"				MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -1661,7 +1709,7 @@ const char *YSGLSL_flashByPointSprite3DDrawingFragmentShader[]=
 	"    }\n",
 	"}\n",
 };
-const int YSGLSL_flashByPointSprite3DDrawingFragmentShader_nLine=136;
+const int YSGLSL_flashByPointSprite3DDrawingFragmentShader_nLine=140;
 const char *YSGLSL_flashByPointSprite3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -1961,6 +2009,8 @@ const char *YSGLSL_variColorMarker3DDrawingFragmentShader[]=
 	"	// -d*d= -4.60517\n",
 	"	// d=2.146\n",
 	"	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"	if(0.0<fogDensity)\n",
 	"	{\n",
 	"		MIDP  float d=fogDensity*abs(fogZ);\n",
 	"		MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -1970,7 +2020,7 @@ const char *YSGLSL_variColorMarker3DDrawingFragmentShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColorMarker3DDrawingFragmentShader_nLine=184;
+const int YSGLSL_variColorMarker3DDrawingFragmentShader_nLine=186;
 const char *YSGLSL_variColorMarker3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -2248,6 +2298,8 @@ const char *YSGLSL_variColorMarkerByPointSprite3DDrawingFragmentShader[]=
 	"	// -d*d= -4.60517\n",
 	"	// d=2.146\n",
 	"	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"	if(0.0<fogDensity)\n",
 	"	{\n",
 	"		MIDP  float d=fogDensity*abs(fogZ);\n",
 	"		MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -2257,7 +2309,7 @@ const char *YSGLSL_variColorMarkerByPointSprite3DDrawingFragmentShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColorMarkerByPointSprite3DDrawingFragmentShader_nLine=186;
+const int YSGLSL_variColorMarkerByPointSprite3DDrawingFragmentShader_nLine=188;
 const char *YSGLSL_variColorMarkerByPointSprite3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",
@@ -2756,6 +2808,8 @@ const char *YSGLSL_variColorPointSprite3DDrawingFragmentShader[]=
 	"	// -d*d= -4.60517\n",
 	"	// d=2.146\n",
 	"	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V\n",
+	"	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.\n",
+	"	if(0.0<fogDensity)\n",
 	"	{\n",
 	"		MIDP  float d=fogDensity*abs(fogZ);\n",
 	"		MIDP  float f=clamp(exp(-d*d),0.0,1.0);\n",
@@ -2765,7 +2819,7 @@ const char *YSGLSL_variColorPointSprite3DDrawingFragmentShader[]=
 	"\n",
 	"}\n",
 };
-const int YSGLSL_variColorPointSprite3DDrawingFragmentShader_nLine=107;
+const int YSGLSL_variColorPointSprite3DDrawingFragmentShader_nLine=109;
 const char *YSGLSL_variColorPointSprite3DDrawingVertexShader[]=
 {
 	"#define YSGLSL_TEX_TYPE_NONE                0\n",

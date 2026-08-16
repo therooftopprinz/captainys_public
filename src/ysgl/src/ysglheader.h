@@ -83,7 +83,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // I didn't find a convenient macro to identify iOS.  Please add a macro __APPLE_IOS__ to the preprocessor macro option.
 
-#if ((defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_APP)) || defined(__ANDROID__)
+#if ((defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_APP)) || defined(__ANDROID__) || defined(YS_USE_OPENGL_ES2)
 	#include <GLES2/gl2.h>
 	#include <GLES2/gl2ext.h>
 	#define YS_GL_ES2

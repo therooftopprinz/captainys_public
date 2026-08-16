@@ -88,6 +88,8 @@ void main()
 	// -d*d= -4.60517
 	// d=2.146
 	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V
+	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.
+	if(0.0<fogDensity)
 	{
 		MIDP  float d=fogDensity*abs(fogZ);
 		MIDP  float f=clamp(exp(-d*d),0.0,1.0);

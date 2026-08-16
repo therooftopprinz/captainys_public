@@ -15,7 +15,7 @@ endif()
 
 
 
-if("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Android" OR "${YS_OPENGL_VERSION}" STREQUAL "OpenGLES2")
 	set(LIB_DEPENDENCY EGL GLESv2)
 endif()
 
@@ -306,6 +306,7 @@ ysglslbitmaprenderer.c
 ysglslplain2ddrawing.c
 ysglslsharedrenderer.c
 ysglslutil.c
+ysglstatecache.c
 ysglslprogram.c
 ysglslprogram.h
 )
@@ -326,6 +327,7 @@ ysglslbitmaprenderer.h
 ysglslplain2ddrawing.h
 ysglslsharedrenderer.h
 ysglslutil.h
+ysglstatecache.h
 )
 
 

@@ -445,6 +445,11 @@ struct YsGLSL3DRenderer *YsGLSLCreateMonoColorPerPixShadingWithTexCoord3DRendere
 */
 struct YsGLSL3DRenderer *YsGLSLCreateVariColorPerVtxShading3DRenderer(void);
 
+/*! Creates the per-vertex shaded renderer without alpha cutoff/discard.
+    Only use it for geometry known to be fully opaque.  Removing discard lets
+    tile-based GPUs retain early depth rejection. */
+struct YsGLSL3DRenderer *YsGLSLCreateVariColorPerVtxShading3DRendererOpaque(void);
+
 /*! This function draws primitives with normal and color per vertex.
     The current renderer must be one of:
       VariColorPerVtxShading3DRenderer

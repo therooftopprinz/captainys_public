@@ -20,6 +20,14 @@ LOWP vec4 YsCalculateStandardLighting(
 
 	for(int lightNo=0; lightNo<YSGLSL_MAX_NUM_LIGHT; lightNo++)
 	{
+		// Disabled lights used to be multiplied out by lightEnabled at the end, which still
+		// paid for two normalize and a pow per light.  On a Mali-G31 that is seven wasted
+		// light evaluations per fragment; the branch is uniform so it costs nothing.
+		if(lightEnabled[lightNo]<=0.0)
+		{
+			continue;
+		}
+
 		MIDP float diffuseIntensity=lightCoeff*max(dot(nomLocal,lightPos[lightNo].xyz),0.0);
 		HIGHP vec3 unitVecToCamera=normalize(vecToCamera);
 		HIGHP vec3 mid=normalize(lightPos[lightNo].xyz+unitVecToCamera);

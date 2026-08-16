@@ -88,6 +88,10 @@ struct YsGLSL3DRenderer *YsGLSLSharedMonoColorPerPixShading3DRenderer(void);
 /*! This function returns a pointer to the shared VariColorPerVtxShading3DRenderer */
 struct YsGLSL3DRenderer *YsGLSLSharedVariColorPerVtxShading3DRenderer(void);
 
+/*! Returns the shared per-vertex shaded renderer without alpha discard.
+    This renderer is only valid for fully opaque geometry. */
+struct YsGLSL3DRenderer *YsGLSLSharedVariColorPerVtxShading3DRendererOpaque(void);
+
 /*! This function returns a pointer to the shared VariColorPerPixShading3DRenderer */
 struct YsGLSL3DRenderer *YsGLSLSharedVariColorPerPixShading3DRenderer(void);
 

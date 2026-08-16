@@ -30,6 +30,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 
 #include "ysglslsharedrenderer.h"
+#include "ysglstatecache.h"
 
 // static struct YsGLSL3DRenderer *ysGLSLFlat3DRenderer=NULL;
 static struct YsGLSL3DRenderer *ysGLSLVariColorBillBoard3DRenderer=NULL;
@@ -42,6 +43,7 @@ static struct YsGLSL3DRenderer *ysGLSLVariColor3DRenderer=NULL;
 // static struct YsGLSL3DRenderer *ysGLSLMonoColorPerVtxShadingWithTexCoord3DRenderer=NULL;
 // static struct YsGLSL3DRenderer *ysGLSLMonoColorPerPixShadingWithTexCoord3DRenderer=NULL;
 static struct YsGLSL3DRenderer *ysGLSLVariColorPerVtxShading3DRenderer=NULL;
+static struct YsGLSL3DRenderer *ysGLSLVariColorPerVtxShading3DRendererOpaque=NULL;
 static struct YsGLSL3DRenderer *ysGLSLVariColorPerPixShading3DRenderer=NULL;
 static struct YsGLSL3DRenderer *ysGLSLVariColorPerVtxShadingWithTexCoord3DRenderer=NULL;
 static struct YsGLSL3DRenderer *ysGLSLVariColorPerPixShadingWithTexCoord3DRenderer=NULL;
@@ -82,6 +84,7 @@ static struct YsGLSL3DRenderer **GetAll3DRenderer(void)
 // 	PushRenderer(&i,all3dRenderer,ysGLSLMonoColorPerVtxShadingWithTexCoord3DRenderer);
 // 	PushRenderer(&i,all3dRenderer,ysGLSLMonoColorPerPixShadingWithTexCoord3DRenderer);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerVtxShading3DRenderer);
+	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerVtxShading3DRendererOpaque);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerPixShading3DRenderer);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerVtxShadingWithTexCoord3DRenderer);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerPixShadingWithTexCoord3DRenderer);
@@ -110,6 +113,7 @@ static struct YsGLSL3DRenderer **GetAll3DRendererWithLight(void)
 // 	PushRenderer(&i,all3dRenderer,ysGLSLMonoColorPerVtxShadingWithTexCoord3DRenderer);
 // 	PushRenderer(&i,all3dRenderer,ysGLSLMonoColorPerPixShadingWithTexCoord3DRenderer);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerVtxShading3DRenderer);
+	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerVtxShading3DRendererOpaque);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerPixShading3DRenderer);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerVtxShadingWithTexCoord3DRenderer);
 	PushRenderer(&i,all3dRenderer,ysGLSLVariColorPerPixShadingWithTexCoord3DRenderer);
@@ -171,6 +175,10 @@ YSRESULT YsGLSLCreateSharedRenderer(void)
 	{
 		ysGLSLVariColorPerVtxShading3DRenderer=YsGLSLCreateVariColorPerVtxShading3DRenderer();
 	}
+	if(NULL==ysGLSLVariColorPerVtxShading3DRendererOpaque)
+	{
+		ysGLSLVariColorPerVtxShading3DRendererOpaque=YsGLSLCreateVariColorPerVtxShading3DRendererOpaque();
+	}
 	if(NULL==ysGLSLVariColorPerPixShading3DRenderer)
 	{
 		ysGLSLVariColorPerPixShading3DRenderer=YsGLSLCreateVariColorPerPixShading3DRenderer();
@@ -226,6 +234,7 @@ YSRESULT YsGLSLSharedRendererLost(void)
 	ysGLSLFlashByPointSprite3DRenderer=NULL;
 	ysGLSLVariColor3DRenderer=NULL;
 	ysGLSLVariColorPerVtxShading3DRenderer=NULL;
+	ysGLSLVariColorPerVtxShading3DRendererOpaque=NULL;
 	ysGLSLVariColorPerPixShading3DRenderer=NULL;
 	ysGLSLVariColorPerVtxShadingWithTexCoord3DRenderer=NULL;
 	ysGLSLVariColorPerPixShadingWithTexCoord3DRenderer=NULL;
@@ -288,6 +297,11 @@ YSRESULT YsGLSLDeleteSharedRenderer(void)
 	{
 		YsGLSLDelete3DRenderer(ysGLSLVariColorPerVtxShading3DRenderer);
 		ysGLSLVariColorPerVtxShading3DRenderer=NULL;
+	}
+	if(NULL!=ysGLSLVariColorPerVtxShading3DRendererOpaque)
+	{
+		YsGLSLDelete3DRenderer(ysGLSLVariColorPerVtxShading3DRendererOpaque);
+		ysGLSLVariColorPerVtxShading3DRendererOpaque=NULL;
 	}
 	if(NULL!=ysGLSLVariColorPerPixShading3DRenderer)
 	{
@@ -390,6 +404,11 @@ struct YsGLSL3DRenderer *YsGLSLSharedMonoColorPerPixShading3DRenderer(void)
 struct YsGLSL3DRenderer *YsGLSLSharedVariColorPerVtxShading3DRenderer(void)
 {
 	return ysGLSLVariColorPerVtxShading3DRenderer;
+}
+
+struct YsGLSL3DRenderer *YsGLSLSharedVariColorPerVtxShading3DRendererOpaque(void)
+{
+	return ysGLSLVariColorPerVtxShading3DRendererOpaque;
 }
 
 struct YsGLSL3DRenderer *YsGLSLSharedVariColorPerPixShading3DRenderer(void)

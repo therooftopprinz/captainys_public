@@ -61,9 +61,11 @@ uniform HIGHP vec2 billBoardDimension;
 uniform sampler2D  textureIdent;
 varying HIGHP vec3 texCoordOut;
 
-// Variables for alpha cutoff
-uniform  LOWP  float alphaCutOff;
+#ifndef YSGLSL_OPAQUE
+	// Variables for alpha cutoff
+	uniform  LOWP  float alphaCutOff;
 
+#endif
 // Variables for fog
 uniform  MIDP  float fogEnabled;
 uniform  MIDP  float fogDensity;
@@ -75,6 +77,10 @@ void main()
 {
 	gl_FragColor=colorOut;
 
+	// Untextured geometry used to sample the texture anyway and then multiply the result
+	// out with useTexture.  A tiler like the Mali-G31 pays full rate for that fetch, and
+	// most of YSFlight's scenery is untextured, so the sample is skipped instead.
+	if(0.0<useTexture)
 	{
 		LOWP  vec4 texcell[3],avg;
 		texcell[0]=texture2D(textureIdent,texCoordOut.xy);
@@ -94,11 +100,13 @@ void main()
 		gl_FragColor=gl_FragColor*avg;
 	}
 
+#ifndef YSGLSL_OPAQUE
 	if(gl_FragColor.a<alphaCutOff)
 	{
 		discard;
 	}
 
+#endif
 	// f  0:Completely fogged out   1:Clear
 	// f=e^(-d*d)
 	// d  0:Clear      Infinity: Completely fogged out
@@ -107,6 +115,8 @@ void main()
 	// -d*d= -4.60517
 	// d=2.146
 	// If visibility=V, d=2.146 at fogZ=V -> fogDensity=2.146/V
+	// With fogDensity 0 the mix below is a no-op, so skip the exp entirely.
+	if(0.0<fogDensity)
 	{
 		MIDP  float d=fogDensity*abs(fogZ);
 		MIDP  float f=clamp(exp(-d*d),0.0,1.0);

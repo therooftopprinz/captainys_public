@@ -36,6 +36,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ysglmath.h"
 #include "ysglbitmap.h"
 #include "ysgldef.h"
+#include "ysglstatecache.h"
 #include "ysglslprogram.h"
 
 /* Force Visual C++ to type-mismatching error. */
@@ -2039,13 +2040,34 @@ struct YsGLSL3DRenderer *YsGLSLCreateMonoColorPerVtxShadingWithTexCoord3DRendere
 
 ////////////////////////////////////////////////////////////
 
-static int YsGLSLVariColorPerVtxShading3DRendererCreateProgram(struct YsGLSL3DRenderer *renderer)
+static int YsGLSLVariColorPerVtxShading3DRendererCreateProgram(struct YsGLSL3DRenderer *renderer,int opaque)
 {
 	int ec=0;
+	const char * const *fragmentShaderSource=YSGLSL_variColorPerVtxShading3DDrawingFragmentShader;
+	int nFragmentShaderSource=YSGLSL_variColorPerVtxShading3DDrawingFragmentShader_nLine;
+	const char **opaqueFragmentShaderSource=NULL;
 
 	renderer->vertexShaderId=glCreateShader(GL_VERTEX_SHADER);
 	renderer->fragmentShaderId=glCreateShader(GL_FRAGMENT_SHADER);
 	renderer->programId=glCreateProgram();
+
+	if(0!=opaque)
+	{
+		int i;
+		opaqueFragmentShaderSource=(const char **)malloc(
+		    sizeof(char *)*(YSGLSL_variColorPerVtxShading3DDrawingFragmentShader_nLine+1));
+		if(NULL==opaqueFragmentShaderSource)
+		{
+			return 1;
+		}
+		opaqueFragmentShaderSource[0]="#define YSGLSL_OPAQUE\n";
+		for(i=0; i<YSGLSL_variColorPerVtxShading3DDrawingFragmentShader_nLine; ++i)
+		{
+			opaqueFragmentShaderSource[i+1]=YSGLSL_variColorPerVtxShading3DDrawingFragmentShader[i];
+		}
+		fragmentShaderSource=opaqueFragmentShaderSource;
+		nFragmentShaderSource=YSGLSL_variColorPerVtxShading3DDrawingFragmentShader_nLine+1;
+	}
 
 	if(YSOK!=YsGLSLCompileAndLinkVertexAndFragmentShader(
 	    renderer->programId,
@@ -2053,11 +2075,12 @@ static int YsGLSLVariColorPerVtxShading3DRendererCreateProgram(struct YsGLSL3DRe
 	    YSGLSL_variColorPerVtxShading3DDrawingVertexShader_nLine,
 	    YSGLSL_variColorPerVtxShading3DDrawingVertexShader,
 	    renderer->fragmentShaderId,
-	    YSGLSL_variColorPerVtxShading3DDrawingFragmentShader_nLine,
-	    YSGLSL_variColorPerVtxShading3DDrawingFragmentShader))
+	    nFragmentShaderSource,
+	    fragmentShaderSource))
 	{
 		++ec;
 	}
+	free(opaqueFragmentShaderSource);
 
 	// Uniforms
 	renderer->uniformProjectionPos=YsGLSLGetUniformLocation(&ec,__FUNCTION__,renderer->programId,"projection");
@@ -2077,7 +2100,14 @@ static int YsGLSLVariColorPerVtxShading3DRendererCreateProgram(struct YsGLSL3DRe
 	renderer->uniformUseZOffsetPos=YsGLSLGetUniformLocation(&ec,__FUNCTION__,renderer->programId,"useZOffset");
 	renderer->uniformZOffsetPos=YsGLSLGetUniformLocation(&ec,__FUNCTION__,renderer->programId,"zOffset");
 
-	renderer->uniformAlphaCutOffPos=YsGLSLGetUniformLocation(&ec,__FUNCTION__,renderer->programId,"alphaCutOff");
+	if(0==opaque)
+	{
+		renderer->uniformAlphaCutOffPos=YsGLSLGetUniformLocation(&ec,__FUNCTION__,renderer->programId,"alphaCutOff");
+	}
+	else
+	{
+		renderer->uniformAlphaCutOffPos=-1;
+	}
 
 	YsGLSLGetTextureUniformPos(renderer,__FUNCTION__);
 	// YsGLSLGetShadowMapUniformPos(renderer,__FUNCTION__); not supported yet
@@ -2100,7 +2130,22 @@ struct YsGLSL3DRenderer *YsGLSLCreateVariColorPerVtxShading3DRenderer(void)
 	struct YsGLSL3DRenderer *renderer=YsGLSLCreateAndInitialize3DRenderer();
 	if(NULL!=renderer)
 	{
-		if(0<YsGLSLVariColorPerVtxShading3DRendererCreateProgram(renderer))
+		if(0<YsGLSLVariColorPerVtxShading3DRendererCreateProgram(renderer,0))
+		{
+			YsGLSLDelete3DRenderer(renderer);
+			return NULL;
+		}
+		YsGLSL3DRendererInitializeUniform(renderer);
+	}
+	return renderer;
+}
+
+struct YsGLSL3DRenderer *YsGLSLCreateVariColorPerVtxShading3DRendererOpaque(void)
+{
+	struct YsGLSL3DRenderer *renderer=YsGLSLCreateAndInitialize3DRenderer();
+	if(NULL!=renderer)
+	{
+		if(0<YsGLSLVariColorPerVtxShading3DRendererCreateProgram(renderer,1))
 		{
 			YsGLSLDelete3DRenderer(renderer);
 			return NULL;

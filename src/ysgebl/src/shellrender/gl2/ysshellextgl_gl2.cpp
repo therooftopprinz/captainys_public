@@ -30,8 +30,22 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ysgl.h>
 #include <ysglslcpp.h>
 #include <ysglbuffermanager_gl2.h>
+#include <stdlib.h>
 #include "ysshellextgl.h"
 
+
+#ifdef YS_GL_ES2
+static YSBOOL YsGLUseOpaqueShellFastPath(void)
+{
+	static int enabled=-1;
+	if(0>enabled)
+	{
+		const char *env=getenv("YSGL_OPAQUE_SHELL");
+		enabled=(NULL==env || 0!=atoi(env));
+	}
+	return (0!=enabled ? YSTRUE : YSFALSE);
+}
+#endif
 
 
 void YsHasShellExtVboSet::Render(const YsMatrix4x4 &viewModelTfm,RenderingOption opt) const
@@ -68,7 +82,24 @@ void YsHasShellExtVboSet::Render(const YsMatrix4x4 &viewModelTfm,RenderingOption
 			auto unitPtr=bufManager.GetBufferUnit(vboSet.solidShadedPosNomColHd);
 			if(nullptr!=unitPtr && YsGLBufferManager::Unit::EMPTY!=unitPtr->GetState())
 			{
-				YsGLSLRenderer renderer(YsGLSLSharedVariColorShaded3DRenderer());
+				auto rendererPtr=YsGLSLSharedVariColorShaded3DRenderer();
+#ifdef YS_GL_ES2
+				const YSBOOL opaqueFastPath=YsGLUseOpaqueShellFastPath();
+				if(YSTRUE==opaqueFastPath)
+				{
+					rendererPtr=YsGLSLSharedVariColorPerVtxShading3DRendererOpaque();
+				}
+#endif
+				YsGLSLRenderer renderer(rendererPtr);
+#ifdef YS_GL_ES2
+				// This buffer carries no texture coordinates.  The opaque renderer is
+				// shared with the scenery, which leaves it set to tile the ground
+				// texture, and sampling that here would paint the shell black.
+				if(YSTRUE==opaqueFastPath)
+				{
+					YsGLSLSet3DRendererTextureType(rendererPtr,YSGLSL_TEX_TYPE_NONE);
+				}
+#endif
 				renderer.GetModelView(push);
 				renderer.SetModelView(mat);
 				unitPtr->GetActualBuffer()->DrawPrimitiveVtxNomCol(renderer,GL_TRIANGLES);

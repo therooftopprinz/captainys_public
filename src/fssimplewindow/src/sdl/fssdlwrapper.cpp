@@ -10,7 +10,16 @@
 #include <algorithm>
 
 #include <SDL2/SDL.h>
+#ifdef YS_USE_OPENGL_ES2
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <ysglslplain2ddrawing.h>
+#include <ysglslsharedrenderer.h>
+#include <ysglsldrawfontbitmap.h>
+#include <ysglstatecache.h>
+#else
 #include <GL/gl.h>
+#endif
 #include <ysglfontdata.h>
 #include <ysglbmpblit.h>
 
@@ -237,6 +246,7 @@ static void TypeSelectedKeyboardCharacter(void)
 	PushChar(c);
 }
 
+#ifndef YS_USE_OPENGL_ES2
 static void BeginOverlay2D(void)
 {
 	glMatrixMode(GL_PROJECTION);
@@ -425,6 +435,153 @@ static void DrawOnScreenKeyboard(void)
 		glDisable(GL_BLEND);
 	}
 }
+#else
+static void DrawOverlayText(int x,int y,const char str[],float r,float g,float b)
+{
+	auto renderer=YsGLSLSharedBitmapFontRenderer();
+	if(nullptr!=renderer)
+	{
+		YsGLSLUseBitmapFontRenderer(renderer);
+		YsGLSLSetBitmapFontRendererViewportOrigin(renderer,YSGLSL_BMPFONT_TOPLEFT_AS_ORIGIN);
+		YsGLSLSetBitmapFontRendererFirstLineAlignment(renderer,YSGLSL_BMPFONT_ALIGN_TOPLEFT);
+		YsGLSLSetBitmapFontRendererViewportSize(renderer,ysWid,ysHei);
+		YsGLSLBitmapFontRendererRequestFontSize(renderer,8,12);
+		YsGLSLSetBitmapFontRendererColor3f(renderer,r,g,b);
+		YsGLSLRenderBitmapFontString2D(renderer,x,y,str);
+		YsGLSLEndUseBitmapFontRenderer(renderer);
+	}
+}
+
+static void DrawOverlayPrimitive(GLenum mode,int nVertex,const GLfloat vertex[],const GLfloat color[4])
+{
+	auto renderer=YsGLSLSharedPlain2DRenderer();
+	if(nullptr!=renderer)
+	{
+		YsGLSLUsePlain2DRenderer(renderer);
+		YsGLSLUseWindowCoordinateInPlain2DDrawing(renderer,1);
+		YsGLSLSetPlain2DRendererUniformColor(renderer,color);
+		YsGLSLDrawPlain2DPrimitiveVtxfv(renderer,mode,nVertex,vertex);
+		YsGLSLEndUsePlain2DRenderer(renderer);
+	}
+}
+
+static void DrawModeBanner(void)
+{
+	if(SDL_GetTicks()<=modeBannerUntil)
+	{
+		const GLboolean depthWasEnabled=glIsEnabled(GL_DEPTH_TEST);
+		glDisable(GL_DEPTH_TEST);
+		DrawOverlayText(
+		    8,20,
+		    cursorMode ? "MENU MODE  A:CLICK  SELECT:FLY" : "FLIGHT MODE  SELECT:CURSOR",
+		    1.0f,1.0f,0.2f);
+		if(depthWasEnabled)
+		{
+			glEnable(GL_DEPTH_TEST);
+		}
+	}
+}
+
+static void DrawSoftwareCursor(void)
+{
+	if(!cursorMode || !mouseCursorVisible)
+	{
+		return;
+	}
+
+	static const GLfloat arrow[14]=
+	{
+		0,0, 0,17, 4,13, 7,19, 10,17, 7,11, 12,11
+	};
+	GLfloat vertex[14];
+	const GLfloat black[4]={0.0f,0.0f,0.0f,1.0f};
+	const GLfloat white[4]={1.0f,1.0f,1.0f,1.0f};
+	const GLboolean depthWasEnabled=glIsEnabled(GL_DEPTH_TEST);
+	const GLboolean blendWasEnabled=glIsEnabled(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+
+	for(int pass=0; pass<2; ++pass)
+	{
+		const GLfloat scale=(0==pass ? 1.0f : 0.72f);
+		for(int i=0; i<7; ++i)
+		{
+			vertex[i*2  ]=(GLfloat)lastMx+arrow[i*2]*scale+(0==pass ? 0.0f : 1.0f);
+			vertex[i*2+1]=(GLfloat)lastMy+arrow[i*2+1]*scale+(0==pass ? 0.0f : 1.0f);
+		}
+		DrawOverlayPrimitive(GL_TRIANGLE_FAN,7,vertex,0==pass ? black : white);
+	}
+
+	if(depthWasEnabled)
+	{
+		glEnable(GL_DEPTH_TEST);
+	}
+	if(blendWasEnabled)
+	{
+		glEnable(GL_BLEND);
+	}
+}
+
+static void DrawOnScreenKeyboard(void)
+{
+	if(!keyboardMode)
+	{
+		return;
+	}
+
+	const GLboolean depthWasEnabled=glIsEnabled(GL_DEPTH_TEST);
+	const GLboolean blendWasEnabled=glIsEnabled(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+	const int panelTop=ysHei-112;
+	const GLfloat panel[8]={0,(GLfloat)panelTop, (GLfloat)ysWid,(GLfloat)panelTop, (GLfloat)ysWid,(GLfloat)ysHei, 0,(GLfloat)ysHei};
+	const GLfloat panelColor[4]={0.02f,0.02f,0.04f,0.90f};
+	DrawOverlayPrimitive(GL_TRIANGLE_FAN,4,panel,panelColor);
+	DrawOverlayText(8,panelTop+15,"ON-SCREEN KEYBOARD  A:TYPE X:BACKSPACE Y:CASE START:DONE",1.0f,1.0f,0.2f);
+
+	for(int row=0; row<4; ++row)
+	{
+		char line[64],*ptr=line;
+		for(int col=0; col<11; ++col)
+		{
+			int c=keyboardRows[row][col];
+			if(keyboardLowerCase && 'A'<=c && c<='Z')
+			{
+				c+='a'-'A';
+			}
+			if(row==keyboardY && col==keyboardX)
+			{
+				*ptr++='[';
+				*ptr++=(char)c;
+				*ptr++=']';
+			}
+			else
+			{
+				*ptr++=' ';
+				*ptr++=(char)c;
+				*ptr++=' ';
+			}
+		}
+		*ptr=0;
+		DrawOverlayText(
+		    12,panelTop+35+row*18,line,
+		    row==keyboardY ? 0.2f : 0.8f,
+		    row==keyboardY ? 1.0f : 0.8f,
+		    row==keyboardY ? 1.0f : 0.8f);
+	}
+
+	if(depthWasEnabled)
+	{
+		glEnable(GL_DEPTH_TEST);
+	}
+	if(!blendWasEnabled)
+	{
+		glDisable(GL_BLEND);
+	}
+}
+#endif
 
 static void ClickMouseButton(int button,int down)
 {
@@ -632,6 +789,7 @@ static void SetupDefaultGlState(int sizX, int sizY)
 {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
+#ifndef YS_USE_OPENGL_ES2
 	glShadeModel(GL_SMOOTH);
 
 	GLfloat dif[] = {0.8F, 0.8F, 0.8F, 1.0F};
@@ -647,11 +805,17 @@ static void SetupDefaultGlState(int sizX, int sizY)
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_NORMALIZE);
+#endif
 
 	glClearColor(1.0F, 1.0F, 1.0F, 0.0F);
+#ifdef YS_USE_OPENGL_ES2
+	glClearDepthf(1.0F);
+#else
 	glClearDepth(1.0F);
+#endif
 	glDisable(GL_DEPTH_TEST);
 	glViewport(0, 0, sizX, sizY);
+#ifndef YS_USE_OPENGL_ES2
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0, (float)sizX - 1, (float)sizY - 1, 0, -1, 1);
@@ -659,8 +823,11 @@ static void SetupDefaultGlState(int sizX, int sizY)
 	glLoadIdentity();
 	glShadeModel(GL_FLAT);
 	glPointSize(1);
+#endif
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#ifndef YS_USE_OPENGL_ES2
 	glColor3ub(0, 0, 0);
+#endif
 }
 
 void FsOpenWindow(const FsOpenWindowOption &opt)
@@ -676,8 +843,14 @@ void FsOpenWindow(const FsOpenWindowOption &opt)
 
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, opt.useDoubleBuffer ? 1 : 0);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+#ifdef YS_USE_OPENGL_ES2
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION,2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,0);
+#else
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#endif
 
 	Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
 	if (opt.sizeOpt == FsOpenWindowOption::FULLSCREEN ||
@@ -703,7 +876,13 @@ void FsOpenWindow(const FsOpenWindowOption &opt)
 	}
 	SDL_GL_SetSwapInterval(1);
 	SDL_GL_GetDrawableSize(ysWin, &ysWid, &ysHei);
-	printf("Created SDL OpenGL window %dx%d\n", ysWid, ysHei);
+	printf("Created SDL %s window %dx%d\n",
+#ifdef YS_USE_OPENGL_ES2
+	    "OpenGL ES 2"
+#else
+	    "OpenGL"
+#endif
+	    ,ysWid,ysHei);
 	printf("GL_VENDOR=%s\n", (const char *)glGetString(GL_VENDOR));
 	printf("GL_RENDERER=%s\n", (const char *)glGetString(GL_RENDERER));
 	printf("GL_VERSION=%s\n", (const char *)glGetString(GL_VERSION));
@@ -1186,6 +1365,12 @@ void FsSwapBuffers(void)
 	DrawOnScreenKeyboard();
 	DrawSoftwareCursor();
 	SDL_GL_SwapWindow(ysWin);
+#ifdef YS_USE_OPENGL_ES2
+	/* Nothing outside the GLSL renderers is supposed to touch the cached
+	   states, but resyncing once a frame keeps a stray call from corrupting
+	   every subsequent frame. */
+	YsGLInvalidateStateCache();
+#endif
 }
 
 int FsInkey(void)

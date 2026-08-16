@@ -1,7 +1,7 @@
 set(TARGET_NAME "ysbitmapfont")
 
 if(NOT "${YS_OPENGL_VERSION}" STREQUAL "OpenGLES2")
-	set(platform_SRCS ysglusefontbitmap.c)
+	set(platform_SRCS ysglusefontbitmap.c ysglbmpblit.c)
 else()
 	set(platform_SRCS "")
 endif()
@@ -12,7 +12,6 @@ add_library(${TARGET_NAME}
 	ysglfontbitmaputil.c
 	ysglmaketextbitmap.c
 	ysglsldrawfontbitmap.c
-	ysglbmpblit.c
 	ysglfontdata.h
 	ysglbmpblit.h
 )

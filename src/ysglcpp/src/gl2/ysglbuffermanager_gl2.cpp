@@ -28,6 +28,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //////////////////////////////////////////////////////////// */
 
 #include "ysglbuffermanager_gl2.h"
+#include "ysglstatecache.h"
 
 void YsGLBufferManager::ActualBuffer::PrepareVbo(YSSIZE_T nVbo)
 {

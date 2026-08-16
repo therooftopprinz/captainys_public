@@ -47,6 +47,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ysglslbitmaprenderer.h"
 #include "ysglslprogram.h"
 #include "ysglslutil.h"
+#include "ysglstatecache.h"
 
 struct YsGLSLBitmapRenderer
 {

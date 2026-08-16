@@ -224,7 +224,7 @@ FSKEY_NUM_KEYCODE
 			#endif
 			#include <GL/gl.h>
 			#include <GL/glu.h>
-		#elif ((defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_APP)) || defined(__ANDROID__)
+		#elif ((defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_APP)) || defined(__ANDROID__) || defined(YS_USE_OPENGL_ES2)
 			#include <GLES2/gl2.h>
 			#include <GLES2/gl2ext.h>
 			#define YS_GL_ES2
