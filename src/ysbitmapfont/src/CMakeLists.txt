@@ -12,7 +12,9 @@ add_library(${TARGET_NAME}
 	ysglfontbitmaputil.c
 	ysglmaketextbitmap.c
 	ysglsldrawfontbitmap.c
+	ysglbmpblit.c
 	ysglfontdata.h
+	ysglbmpblit.h
 )
 target_link_libraries(${TARGET_NAME} ysgl)
 target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

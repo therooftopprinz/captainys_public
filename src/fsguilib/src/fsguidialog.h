@@ -153,6 +153,11 @@ public:
 
 	void SetFgColor(const YsColor &fgColIn);
 
+	/* Fills the item rectangle when SetFill is on.  The text bitmap itself is
+	   always rendered with a transparent background, so this is the only way to
+	   put a static on an opaque plate of its own. */
+	void SetBgColor(const YsColor &bgColIn);
+
 	void SetDrawFrame(YSBOOL frame);
 	void SetFill(YSBOOL fill);
 	YSBOOL GetDrawFrame(void) const;

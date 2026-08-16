@@ -10,7 +10,14 @@ if(APPLE)
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
 	set(LIB_DEPENDENCY EGL GLESv2)
 elseif(UNIX)
-	set(LIB_DEPENDENCY GL GLU X11)
+	option(YSFLIGHT_USE_SDL "Use SDL2 window backend instead of X11/GLX" OFF)
+	if(YSFLIGHT_USE_SDL)
+		find_package(SDL2 REQUIRED)
+		# yssystemfont still needs X11 fonts on Linux.
+		set(LIB_DEPENDENCY GL GLU X11 SDL2 ysbitmapfont)
+	else()
+		set(LIB_DEPENDENCY GL GLU X11)
+	endif()
 else()
 	set(LIB_DEPENDENCY)
 endif()
@@ -35,10 +42,16 @@ elseif(APPLE)
 		macosx/fsmacosxwrapperobjc.m
 	)
 elseif(UNIX)
-	set(platform_SRCS
-		glx/fsglxkeymap.cpp
-		glx/fsglxwrapper.cpp
-	)
+	if(YSFLIGHT_USE_SDL)
+		set(platform_SRCS
+			sdl/fssdlwrapper.cpp
+		)
+	else()
+		set(platform_SRCS
+			glx/fsglxkeymap.cpp
+			glx/fsglxwrapper.cpp
+		)
+	endif()
 else()
 	set(platform_SRCS "")
 endif()
@@ -54,7 +67,11 @@ android/fssimplewindow_android.h
 )
 
 add_library(${TARGET_NAME} ${SRCS} ${HEADERS})
-target_link_libraries(${TARGET_NAME} ${LIB_DEPENDENCY})
+if(YSFLIGHT_USE_SDL AND TARGET SDL2::SDL2)
+	target_link_libraries(${TARGET_NAME} PUBLIC ${LIB_DEPENDENCY} SDL2::SDL2)
+else()
+	target_link_libraries(${TARGET_NAME} ${LIB_DEPENDENCY})
+endif()
 target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 set_property(TARGET ${TARGET_NAME} PROPERTY FOLDER ${SUB_FOLDER})
 

@@ -8,7 +8,7 @@ endif()
 
 set(TARGET_NAME fsguilib_gl1)
 set(IS_LIBRARY_PROJECT 1)
-set(LIB_DEPENDENCY yssystemfont fssimplewindow ysclass ysbitmap)
+set(LIB_DEPENDENCY yssystemfont fssimplewindow ysclass ysbitmap ysbitmapfont)
 set(INCLUDE_DEPENDENCY fsguilib)
 set(OWN_HEADER_PATH .)
 set(ADDITIONAL_HEADER_PATH)

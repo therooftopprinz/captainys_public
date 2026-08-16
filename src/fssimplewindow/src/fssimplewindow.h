@@ -423,6 +423,20 @@ void FsSetWindowTitle(const char windowTitle[]);
 void FsShowMouseCursor(int showFlag);
 int FsIsMouseCursorVisible(void);
 
+/* Nonzero while a game pad is driving the mouse cursor for menus.  The caller
+   must not let the same pad drive an analog axis at the same time. */
+int FsIsGamepadMenuMode(void);
+
+/* While the pad's throttle gate is held, one stick meters throttle instead of
+   steering.  Returns the joystick axis that must be held at centre for the
+   duration, or -1 when every axis is free. */
+int FsGetSuppressedJoyAxis(void);
+
+/* Nonzero once the player has asked to quit from the pad.  A handheld has no
+   window close button, so the application must poll this and shut itself down
+   through its own exit path. */
+int FsIsQuitRequested(void);
+
 void FsPollDevice(void);
 void FsSleep(int ms);
 long long int FsPassedTime(void);

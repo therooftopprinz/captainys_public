@@ -354,6 +354,15 @@ void FsGuiStatic::SetFgColor(const YsColor &fgColIn)
 	RenderOwnText();
 }
 
+void FsGuiStatic::SetBgColor(const YsColor &bgColIn)
+{
+	bgCol=bgColIn;
+	if(owner!=NULL)
+	{
+		owner->SetNeedRedraw(YSTRUE);
+	}
+}
+
 
 void FsGuiStatic::SetDrawFrame(YSBOOL frame)
 {

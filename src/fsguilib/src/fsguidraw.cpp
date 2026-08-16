@@ -620,7 +620,7 @@ void FsGuiStatic::Draw(YSBOOL focus,YSBOOL  /*mouseOver*/,const YsColor & /*defB
 {
 	if(fill==YSTRUE)
 	{
-		FsGuiCommonDrawing::DrawRect(x0,y0,x0+wid-1,y0+hei-1,YsGrayScale(0.5),YSTRUE);
+		FsGuiCommonDrawing::DrawRect(x0,y0,x0+wid-1,y0+hei-1,bgCol,YSTRUE);
 	}
 	if(frame==YSTRUE)
 	{

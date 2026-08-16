@@ -55,6 +55,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <ysbitmaparray.h>
+#include <ysglbmpblit.h>
 #include "fsgui.h"
 #include "fsguicommondrawing.h"
 
@@ -221,8 +222,7 @@ void FsGuiCommonDrawing::DrawBmp(const YsBitmap &bmp,double x,double y)
 	bmpWid=bmp.GetWidth();
 	bmpHei=bmp.GetHeight();
 
-	glRasterPos2d(x,y+(double)(bmpHei-1));
-	glDrawPixels(bmpWid,bmpHei,GL_RGBA,GL_UNSIGNED_BYTE,bmp.GetRGBABitmapPointer());
+	YsGlBlitRGBA2D(x,y+(double)(bmpHei-1),bmpWid,bmpHei,bmp.GetRGBABitmapPointer());
 
 #ifdef YSOGLERRORCHECK
 	FsOpenGlShowError("%s Out",__FUNCTION__);

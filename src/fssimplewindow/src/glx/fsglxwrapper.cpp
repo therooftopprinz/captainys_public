@@ -1327,3 +1327,18 @@ int FsIsMouseCursorVisible(void)
 {
 	return 1;
 }
+
+int FsIsGamepadMenuMode(void)
+{
+	return 0;
+}
+
+int FsGetSuppressedJoyAxis(void)
+{
+	return -1;
+}
+
+int FsIsQuitRequested(void)
+{
+	return 0;
+}
